@@ -1,3 +1,6 @@
 # autoplot
 Automatic data process / statistics / visualization
-![My image](username.github.com/repository/img/image.jpg)
+
+
+![bar_scatter](kafkapple.github.com/autoplot/bar_scatter.png)
+![time_series](kafkapple.github.com/autoplot/time_series.png)
