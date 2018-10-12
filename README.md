@@ -2,5 +2,5 @@
 Automatic data process / statistics / visualization
 
 
-![bar_scatter](kafkapple.github.com/autoplot/bar_scatter.png)
+![bar_scatter](https://github.com/kafkapple/autoplot/blob/master/bar_scatter.png)
 ![time_series](kafkapple.github.com/autoplot/time_series.png)
