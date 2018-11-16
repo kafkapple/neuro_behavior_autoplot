@@ -20,6 +20,10 @@ def stars(p):
        return "-"
    
 # calculate t-test. according to the normality & variance test, non-parametric test will be given. two-way is default
+
+def anova(data):
+    print('anova')
+    
 def t_test(x,y):
     # normality test. p>0.05 means fail
     _, p_x = stats.shapiro(x)
