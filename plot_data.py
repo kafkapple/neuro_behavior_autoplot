@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from scipy import stats
 import matplotlib.pyplot as plt
-
+from datetime import datetime
 import cal_stat as cs
 import data_process as ds
 
@@ -66,7 +66,7 @@ list_palette = [flatui,
                  pastel_rainbow,
                  pkm_color]           
 
-def color_setting(list_palette=list_palette, n_color=2, color_i = 2):
+def color_setting(list_palette=list_palette, n_color=2, color_i = 1):
     sns.set_style('whitegrid')
     sns.set_color_codes()
     
@@ -79,7 +79,7 @@ def color_setting(list_palette=list_palette, n_color=2, color_i = 2):
     #### 
     #sns.set_palette('hls',n_color) # Reds
     sns.set_palette(list_palette[color_i], n_color)
-    sns.set_palette([flatui[0], flatui[3]], n_color)
+    #sns.set_palette([flatui[0], flatui[3]], n_color)
     current_palette = sns.color_palette()
     ##sns.palplot(current_palette)
     ###
@@ -106,16 +106,17 @@ def cat_plot(data):
     sns.set_style('ticks',rc = {"lines.linewidth":0.1,"xtick.major.size": 0.1, "ytick.major.size": 1})
     
 # plot time series data
-def plot_time_series(data):
+    
+def plot_time_series(data, current_palette=[], labels=[]):
     fig_size=(7,5)
     ylim_max = 30 # default ylim max value
     
     max_freezing = data.freezing.max(axis=0) # get the max value
-    if max_freezing >ylim_max:
-        ylim_max = max_freezing
+#    if max_freezing >ylim_max:
+#        ylim_max = max_freezing
     fig, ax = plt.subplots(figsize=fig_size)
    
-    sns.lineplot(x='timebin', y='freezing', data=data, hue='obsdem',markers=True, ax=ax, ci=68 , err_style = 'bars')
+    sns.lineplot(x='timebin', y='freezing', data=data, hue='type',markers=True, ax=ax, ci=68 , err_style = 'bars')
     #sns.set_style('ticks',rc = {"lines.linewidth":1,"xtick.major.size": 1, "ytick.major.size": 1})
     
     ax.set(title = 'OFL',
@@ -127,13 +128,19 @@ def plot_time_series(data):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     
+    
+    patches = legend_patch(current_palette, labels)   # to add legend
+    ax.legend(handles = patches, loc='best', edgecolor =None, fontsize=13, bbox_to_anchor=(0.8,0.7)) # upper right
 #    for l in ax.lines:
 #        print(l.get_linewidth())
 #        #plt.setp(l,linewidth=5, ax=ax)
     
     fig.tight_layout()
-    fig.savefig('time_series.png', transparent = True, dpi=200)
-    fig.show()
+    #fig.savefig('time_series.png', transparent = True, dpi=200)
+    time_now = datetime.now().strftime('%Y%m%d_%H%M%S')
+    fig.savefig('time_series_{}.png'.format(time_now), transparent = True, dpi=200)    
+    
+    #fig.show()
        
 def plot_bar_scatter(i=0, data=[], current_palette=[], labels=[],p=False, flag_bar_only=False, violin=False):
     data = data.dropna()
@@ -211,6 +218,65 @@ def change_width(ax, new_value):
         # recenter
         patch.set_x(patch.get_x() + diff * .5)
         
+def process_pd(path = r'E:\0Temp_data\Tube\_'):
+    os.chdir(path)
+    name='temp_other_factors_fam.xlsx'
+    obs = pd.read_excel(name)
+    #printlen(obs.columns)
+    list_group = []
+    #list_type = []
+    labels=[]
+    
+    list_type = obs['type'].unique()
+    list_type.sort()
+    
+    for i in list_type:
+        #rint(i)
+        list_group.append(obs[obs['type']==i])
+        #list_type.append(i)
+    #list_type.sort()
+    print(list_type)
+    
+    sel = 'retf3'
+    
+    # OFL
+    if sel =='ret':
+        bin_list = [i for i in obs.keys()[10:14]]
+    else:
+        bin_list = [int(i) for i in obs.keys()[1:10]]
+    
+    # ret
+    
+    #bin_list.append('type')
+    count = 0
+    for j in range(len(list_group)):
+        
+        tt = list_group[j].melt(id_vars='subject',value_vars=bin_list, var_name='timebin', value_name='freezing')
+        tt = tt.sort_values(['subject', 'timebin'])
+        tt['type']=list_type[j]
+        if count ==0:
+        
+            result = tt
+        else:
+            result=result.append(tt)
+        count+=1
+        
+    if sel=='ret':
+        result['timebin'] = result['timebin'].str.replace('ret','').astype(int)
+    
+    n_group = obs.groupby(by='type')['subject'].count()
+    #n_group.keys()[i], n_group[i]
+    
+    
+    for i in range(len(list_type)):
+        labels.append('{} (n={})'.format(n_group.keys()[i], n_group[i]))
+        
+    return result, labels
+    
+    
+    # 추가로 hue 를 'type 할당
+
+     
 def main():
     #name = '/python/data/dom_sub.xlsx'
     os.chdir('/python/data/tube/')
@@ -218,7 +284,7 @@ def main():
     name = '/python/data/tube/total_tube_ofl.xlsx'
     #name = '/python/data/ofl_rank_anova3.csv'
     df = pd.read_excel(name)
-    
+    print('read')
     n_list = [5, 5, 5, 4, 5, 5]
     idx = 0
     data = df[df.keys()[2]]
@@ -234,8 +300,6 @@ def main():
         print(idx,c_i)
         #plot_bar_multi(c_i, sort)
         c_i+=1
-        
-        
     # single plot
     #current_pal = pkm_color
     #df_cur = df.iloc[:,3]
@@ -262,15 +326,11 @@ def main():
             
             current_pal = [flatui[0], flatui[3]]
 
-            plot_violin_scatter(i, df_cur, p, current_palette = current_pal, labels = legend) # bar scatter plot
+            #plot_violin_scatter(i, df_cur, p, current_palette = current_pal, labels = legend) # bar scatter plot
             #plot_bar_scatter(i, df_cur, p, current_palette, legend)
     #obs, dem = data_ofl_read()
-
     ## Statistics. T-test 
-    
-    
     ## plot
-   
     #plot_bar_scatter_multi(df, current_palette, legend) # bar scatter plot
     
     # 2. time series plot
@@ -280,8 +340,34 @@ def main():
     total = ds.data_ofl_read(list_csv[0])
     #plot_time_series(total)
     
+    
+def test_plot():
+        
+    fig, axs = plt.subplots(2, 2)
+    
+    axs[0, 0].imshow(np.random.random((100, 100)))
+    
+    axs[0, 1].imshow(np.random.random((100, 100)))
+    
+    axs[1, 0].imshow(np.random.random((100, 100)))
+    
+    axs[1, 1].imshow(np.random.random((100, 100)))
+    
+    plt.subplot_tool()
+    plt.show()
 if __name__ == '__main__':
-    main()
+    #main()
+    plt.close()
+    df, labels = process_pd()
+    #n_class = len(df['type'].unique())
+    #print(n_class)
+    #n_row = df.shape[0]
+    #n_col = df.shape[1]
+    #print(n_row, n_col)
+    
+    current_pal = color_setting(n_color = len(labels), color_i=2) # class 종류 color plot 준비
+            #current_pal = [flatui[0], flatui[3]]
+    plot_time_series(df, current_pal, labels)
     
 
     
